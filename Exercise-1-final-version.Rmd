@@ -1,0 +1,1288 @@
+---
+title: "ORLA 6541 - Exercise 1" 
+author: "Sam Kearney, Feiyi Sun, Ming Zhao"
+date: "2022-10-02"
+output: html_document
+---
+
+# Wickham & Grolemund (2017): Chapters 3 Data Visualizations
+
+tidyverse has packages which you will use in almost every **_data analysis_**. It also tells you which functions from the tidyverse **_conflict_** with functions in base R (or from other packages you might have loaded).
+
+```{r}
+library(tidyverse)
+```
+## Layered grammar of graphics
+
+ggplot(data = <DATA>) + 
+  <GEOM_FUNCTION>(
+     mapping = aes(<MAPPINGS>),
+     stat = <STAT>, 
+     position = <POSITION>
+  ) +
+  <COORDINATE_FUNCTION> +
+  <FACET_FUNCTION>
+  
+Step1: Start with a dataset and then transform it into the information that you want to display (with a stat).
+
+Step2: Choose a **geometric object** to represent each observation in the transformed data. Use the **aesthetic properties** of the geoms to represent variables in the data. Map the values of each variable to the levels of an aesthetic.
+
+Step3: Select a **coordinate system** to place the geoms into. You’d use the location of the objects (which is itself an aesthetic property) to display the values of the x and y variables. 
+
+Step4: Split the graph into subplots (faceting) if needed
+
+## 3.2 First steps (to ggplot)
+
+With ggplot2, you begin a plot with the function `ggplot()`. Then add more layers to it using **_geom functions_**. Each geom function in ggplot2 takes a **_mapping argument_** which defines how variables in your dataset are mapped to visual properties. The mapping argument is always paired with `aes()`. The x and y arguments of `aes()` specify which variables to map to the x and y axes.
+
+### 3.2.4 Exercises
+
+#### **1. Run ggplot(data = mpg). What do you see?**
+
+See a gray background of the plot.
+
+```{r}
+ggplot(data = mpg)
+```
+
+#### **2. How many rows are in mpg? How many columns?**
+
+234 rows, 11 columns
+
+```{r}
+dim(mpg)
+# or: nrow(mpg), ncol(mpg), glimpse(mpg)
+```
+
+#### **3. What does the drv variable describe? Read the help for ?mpg to find out.**
+
+drv is a categorical variable which describes "the type of drive train, where f = front-wheel drive, r = rear wheel drive, 4 = 4wd."
+
+```{r}
+?mpg
+```
+
+#### **4. Make a scatterplot of hwy vs cyl.**
+
+There are two methods to get the scatterplot. The final outcome looks the same, but the first layer looks different. The first line in method 1 will display not only the gray background but also the grid. However, the first line in method 2 will only display the gray background.
+
+```{r}
+# Method1: mapping argument in ggplot()
+ggplot(data = mpg, mapping = aes(cyl, hwy)) + 
+  geom_point()
+```
+
+```{r}
+# Method2: mapping argument in the geom function: geom_point()
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(cyl, hwy))
+```
+
+#### **5. What happens if you make a scatterplot of class vs drv? Why is the plot not useful?**
+
+There are only 12 dots showing up while there are 234 observations. Each dot doesn't refer to each observation but the unique pair of each level from these two categorial variables. We fail to see the pattern of our data so the plot is not useful.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(class, drv))
+```
+
+```{r}
+# count() allows us to check the number of observations contained in each pair.
+count(mpg, class, drv)
+```
+
+## 3.3 Aesthetic Mappings
+
+To add a third variable to the plot: Map an aesthetic to a variable and associate the name of the aesthetic to the name of the variable inside aes() such as "color = var1". ggplot2 will automatically assign a unique level of the aesthetic (here a unique color) to each unique value of the variable, a process known as **scaling**. 
+
+Note: mapping an **_unordered_** variable (here class: type of car) to an **_ordered aesthetic_** (size) is not a good idea. Instead, we can use an **_unordered aesthetic_** such as opacity (alpha) or shape. However, only six shape will show up. If use shape aesthetic, additional shapes will be unplotted.
+
+### 3.3.1 Exercises
+
+#### **1. What’s gone wrong with this code? Why are the points not blue?**
+
+The dots are still in pink. Now, "blue" is interpreted as a categorical variable which only takes a single value "blue". If we want to change the dot color to blue, color = "blue" argument should go outside of mapping argument. 
+
+```{r}
+ggplot(data = mpg) +
+  geom_point(mapping = aes(x = displ, y = hwy, color = "blue"))
+```
+#### **2. Which variables in mpg are categorical? Which variables are continuous? (Hint: type ?mpg to read the documentation for the dataset). How can you see this information when you run mpg?**
+
+Categorical (with <chr>): manufacturer, model, trans, drv, fl, class
+
+Continuous (with <dbl>, <int>): displ, year, cyl, cty, hwy
+
+```{r}
+glimpse(mpg)
+```
+#### **3. Map a continuous variable to color, size, and shape. How do these aesthetics behave differently for categorical vs. continuous variables?**
+
+If map a continuous variable to the `ase()` function, the legend becomes a spectrum (or scale) that varies from a light color to dark color.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = cty, color = hwy))
+```
+
+#### **4. What happens if you map the same variable to multiple aesthetics?**
+
+There will be multiple legends showing duplicate or redundant information of that variable.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = cty, color = hwy, size = hwy))
+```
+
+#### **5. What does the stroke aesthetic do? What shapes does it work with? (Hint: use ?geom_point)**
+
+stroke adjusts the thickness of the border for shapes.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = cty, stroke = 5))
+```
+
+#### **6. What happens if you map an aesthetic to something other than a variable name, like aes(colour = displ < 5)? Note, you’ll also need to specify x and y.**
+
+The legend will have two levels, True or False since displ < 5 serves as a logical variable.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = hwy, y = cty, color = displ < 5))
+```
+
+## 3.5 Facets
+
+`facet_wrap`: Another way to add a categorical variable to the plot besides x and y axis. "The first argument of facet_wrap() should be a **_formula_**, which you create with ~ followed by a variable name (here “formula” is the name of a data structure in R, not a synonym for “equation”)."
+
+`facet_grid`: to facet your plot on **_the combination of two variables_**. The first argument of facet_grid() is also a formula. This time the formula should contain two variable names separated by a ~. If prefer to not facet in the rows or columns dimension, use a . instead of a variable name, e.g. **+ facet_grid(. ~ cyl)**.
+
+### 3.5.1 Exercises
+
+#### **1. What happens if you facet on a continuous variable?**
+
+The continuous variable is converted to a categorical variable. Each facet refers to a unique value of that converted categorical variable.
+
+```{r}
+ggplot(mpg, ) + 
+  geom_point(aes(x = hwy, y = cty)) + 
+  facet_wrap(~displ, nrow = 5)
+```
+
+#### **2. What do the empty cells in plot with facet_grid(drv ~ cyl) mean? How do they relate to this plot?**
+
+Empty cells mean that there are no observations for the combination of "drv = r, cyl = 4", "drv = 4, cyl = 5", and "drv = r, cyl = 5". This corresponds to the missing points in the second plot below.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_grid(drv ~ cyl)
+```
+
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = drv, y = cyl))
+```
+
+#### **3. What plots does the following code make? What does . do?**
+
+`.` means not faceting in the columns or rows. If . is after ~, this means faceting on the y-axis.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .) # Facet by values of drv on the y-axis
+table(mpg$drv)
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) +
+  facet_grid(. ~ cyl) # Facet by values of cyl on the x-axis
+table(mpg$cyl)
+```
+#### **4. Take the first faceted plot in this section. What are the advantages to using faceting instead of the colour aesthetic? What are the disadvantages? How might the balance change if you had a larger dataset?**
+
+Advantages: 1) Be able to compare the relationship between two variables across multiple groups. 2) Easier to distinguish between multiple groups. If use color aesthetic, sometimes it's hard to distinguish between two colors. 3) Be able to plot all the groups. Color aesthetic can show at most 9 groups.
+
+Disadvantages: 1) Hard to compare the values of x and y-axis across groups. For example, it hard to compare the values of hwy across groups in the first row and groups in the second row. It's also hard to compare the values of displ across groups in the four columns. 2) Cannot see where the data points are for each group in the whole plot before faceting.
+
+For a larger dataset, given lots of data points, it may work better if we do faceting since it can the mitigate overplotting issue a little bit.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(~ class, nrow = 2)
+```
+
+#### **5. Read ?facet_wrap. What does nrow do? What does ncol do? What other options control the layout of the individual panels? Why doesn’t facet_grid() have nrow and ncol arguments?**
+
+nrow and ncol specify how many rows and columns to include when displaying the facets. For facet_grid(), the number of rows and columns are determined by the number of levels of each variable.
+
+"scales" changes the scale of x and y-axis which can help spread out the data points.
+
+"Labeller" will help label the variable we facet by. **Question**: But not sure what options other than "label_both" will be. 
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(~ class, nrow = 2, scales = "free", labeller = "label_both")
+```
+#### **6. When using facet_grid() you should usually put the variable with more unique levels in the columns. Why?**
+
+Because there will be more space for columns.
+
+## 3.6 Geometric objects
+
+Distinguish between local mapping and global mapping. 
+
+```{r}
+# ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + # global mapping
+#   geom_point(mapping = aes(color = class)) + # local mapping
+#   geom_smooth()
+```
+
+Avoid repetition of mapping
+
+```{r}
+# Repetition: same mapping argument appear in two layeres
+# ggplot(data = mpg) + 
+#   geom_point(mapping = aes(x = displ, y = hwy)) +
+#   geom_smooth(mapping = aes(x = displ, y = hwy))
+
+# Specifying the global mapping is more efficient. Same result as above.
+# ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+#   geom_point() + 
+#   geom_smooth()
+```
+
+### 3.6.1 Exercises
+
+#### **1. What geom would you use to draw a line chart? A boxplot? A histogram? An area chart?**
+
+line chart: `geom_line()`, boxplot: `geom_boxplot()`, histogram: `geom_histogram()`, area chart: `geom_area()`
+
+[**Click here to explore what area chart looks like**](http://www.sthda.com/english/wiki/ggplot2-area-plot-quick-start-guide-r-software-and-data-visualization)
+
+#### **2. Run this code in your head and predict what the output will look like. Then, run the code in R and check your predictions.**
+
+No shade around the line since standard error (se) is set to be FALSE (not displayed).
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE)
+```
+
+
+#### **3. What does show.legend = FALSE (within `geom_smooth()` do? What happens if you remove it? Why do you think I used it earlier in the chapter?**
+
+The legend box "color = drv" will disppear.
+
+```{r}
+# legend box is still there if not comment out geom_point() (Question: why?)
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE, show.legend = FALSE)
+
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_smooth(se = FALSE, show.legend = FALSE)
+```
+#### **4. What does the se argument to geom_smooth() do?**
+
+se argument adds standard errors around the line (a gray shade).
+
+#### **5. Will these two graphs look different? Why/why not?**
+
+No. Because both methods have the same data and mapping arguments. The first method has the global arguments which solve the repetition issue while the second method has local arguments in each layer which is not necessary.  
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  geom_smooth()
+
+ggplot() + 
+  geom_point(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_smooth(data = mpg, mapping = aes(x = displ, y = hwy))
+```
+
+#### **6. Recreate the R code necessary to generate the following graphs.**
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() + 
+  geom_smooth()
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() + 
+  geom_smooth(aes(group = drv), se = FALSE)
+
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() + 
+  geom_smooth(aes(group = drv), se = FALSE)
+
+# color = drv should not be in the ggplot (i.e. not as a global argument)
+# Otherwise, there will be three smooth lines
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) + 
+  geom_smooth(se = FALSE)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(aes(color = drv)) +
+  geom_smooth(aes(linetype = drv), se = FALSE)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(size = 4, color = "white", stroke = 1) + # stroke changes the width of the border. Higher the number, thicker the border
+  geom_point(aes(color = drv))
+```
+```{r}
+ggplot(mtcars, aes(wt, mpg)) +
+  geom_point(shape = 21, colour = "black", fill = "white", size = 5, stroke = 2)
+```
+
+## 3.7 Statistical transformations
+
+The algorithm used to calculate new values for a graph is called a **stat**, short for statistical transformation. Every geom (e.g. `geom_bar()`) has a default stat (e.g. `stat_count()`); and every stat has a default geom. 
+
+Within `geom_bar()`, we can define the `stat` argument like the following. `stat = "identity"` lets us map the height of the bars to the raw values of a 
+y variable rather than counting rows of one level of a x variable by default. 
+
+```{r}
+demo <- tribble(
+  ~cut,         ~freq,
+  "Fair",       1610,
+  "Good",       4906,
+  "Very Good",  12082,
+  "Premium",    13791,
+  "Ideal",      21551
+)
+
+ggplot(data = demo) +
+  geom_bar(mapping = aes(x = cut, y = freq), stat = "identity") # the default is "count" after stat
+```
+
+Display a bar chart of proportion: Convert the y variable from frequency to proportion by applying `stat()` after mapping argument (inside `aes()`).
+
+**Question**: what does it mean by "group = 1"?
+
+```{r}
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, y = stat(prop), group = 1))
+```
+
+### 3.7.1 Exercises
+
+#### **1. What is the default geom associated with stat_summary()? How could you rewrite the previous plot to use that geom function instead of the stat function?**
+
+The default geom for `stat_summary()` is `geom_pointrange()`.
+
+```{r}
+# Step1: apply geom_pointrange
+# Issue: defaulting to mean_se(). The previous plot is using min, median, max.
+ggplot(diamonds) + 
+  geom_pointrange(aes(x = cut, y = depth),
+                  stat = "summary")
+
+# Step2: specify certain values
+ggplot(diamonds) + 
+  geom_pointrange(aes(x = cut, y = depth),
+                  stat = "summary",
+                  fun.min = min,
+                  fun.max = max,
+                  fun = median)
+```
+
+#### **2. What does geom_col() do? How is it different to geom_bar()?**
+
+According to the documentation, if you want the heights of the bars to represent **_values in the data_**, use `geom_col()`. `geom_bar()` uses `stat_count()` by default: it counts the number of cases at each x position. `geom_col()` uses `stat_identity()`: it leaves the data as is.
+
+#### **3. Most geoms and stats come in pairs that are almost always used in concert. Read through the documentation and make a list of all the pairs. What do they have in common?**
+
+Have names in common.
+
+#### **4. What variables does stat_smooth() compute? What parameters control its behaviour?**
+
+Computed variables (according to the documentation): predicted value (y), ymin (lower pointwise confidence interval around the mean), ymax (upper pointwise confidence interval around the mean), standard error (se).
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point() +
+  geom_smooth()
+```
+
+#### **5. In our proportion bar chart, we need to set group = 1. Why? In other words what is the problem with these two graphs?**
+
+Problem is all the bars are of the same height. 
+
+group="whatever" is a "dummy" grouping to override the default behavior, which (here) is to group by cut and in general is to group by the x variable. The default for `geom_bar` is to group by the x variable in order to **_separately count the number of rows in each level of the x variable_**. For example, here, the default would be for geom_bar to return the number of rows with cut equal to "Fair", "Good", etc.
+
+However, if we want proportions, then we need to consider all levels of cut together.group=1 (or group="x", etc.) prevents this, so that the proportions of each level of cut will be relative to all levels of cut.
+
+[**ggplot geom_bar: meaning of aes(group = 1)**](https://stackoverflow.com/questions/39878813/ggplot-geom-bar-meaning-of-aesgroup-1)
+
+**Question**: To show the proportions, we can set any number after group argument not just 1?
+
+```{r}
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, y = after_stat(prop)))
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = color, y = after_stat(prop)))
+
+ggplot(diamonds) + 
+  geom_bar(aes(x = cut, y = after_stat(prop), group = 1))
+# With the fill aesthetic, the heights of the bars need to be normalized.
+# No need for "group = 1" in this case.
+ggplot(diamonds) + 
+  geom_bar(aes(x = cut, fill = color, y = ..count../sum(..count..)))
+```
+
+## 3.8 Position adjustments
+
+position argument within `geom_bar()` function outside of mapping argument:
+
+- "identity": place each object exactly where it falls in the context of the graph. **_overlapping_** issue
+
+- "fill": stacking
+
+- "dodge": places overlapping objects directly beside one another
+
+position argument that works well within `geom_point`:
+
+- "jitter": solve the overplotting issue where data points overlap to a degree where we have difficulty seeing relationships between points and variables. This makes your graph less accurate at small scales, it makes your graph more revealing at large scales. 
+
+### 3.8.1 Exercises
+
+#### **1. What is the problem with this plot? How could you improve it?**
+
+There is an overplotting issue. There are 234 observations; however, there are not that many dots in the following plot. We can solve this problem using `position = "jitter"`
+
+```{r}
+# Overplotting problem
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_point()
+
+# Add randomness to improve the plot
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_point(position = "jitter")
+```
+
+#### **2. What parameters to geom_jitter() control the amount of jittering?**
+
+width, height: Amount of vertical and horizontal jitter. The jitter is added in both positive and negative directions, so the total spread is twice the value specified here.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_jitter(width = 3) # Question: not sure what value is appropriate
+```
+
+#### **3. Compare and contrast `geom_jitter()` with `geom_count()`.**
+
+`geom_jitter()` change the location of each dot by adding some randomness which will make the graph a bit less accurate, while `geom_count()` change the size of the dot based on how many observations are at that location rather than the location of the dot.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_count()
+```
+
+#### **4. What’s the default position adjustment for geom_boxplot()? Create a visualisation of the mpg dataset that demonstrates it.**
+
+Observation: The following plot has drv (3 levels) on the x-axis. The boxplots for each level are spread out. 
+
+The default position adjustment for geom_boxplot() is dodge2. Recall that `position = "dodge"` places overlapping objects directly beside one another. dodge2 position adjustment does not change the vertical position of a geom but moves the geom horizontally to avoid overlapping other geoms.
+
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = drv, y = hwy, color = class)) + 
+  geom_boxplot()
+```
+
+## 3.9 Coordinate systems
+
+The default coordinate system is the **Cartesian coordinate system** where the x and y positions act independently to determine the location of each point. Other coordinate systems:
+
+- `coord_flip()` switches the x and y axes, useful for long labels.
+
+- `coord_quickmap()` sets the aspect ratio correctly for maps, important plotting spatial data with ggplot2 
+
+- `coord_polar()` uses polar coordinates, turn a bar chart to a pie chart.
+
+This part is about <coordinate_function> added to the <geom_function>.
+
+### 3.9.1 Exercises
+
+#### **1. Turn a stacked bar chart into a pie chart using coord_polar().**
+
+```{r}
+ggplot(diamonds) + 
+  geom_bar(aes(x = cut, fill = cut), 
+           show.legend = FALSE, 
+           width = 1 # width between bars
+           ) + 
+  coord_polar()
+```
+#### **2. What does labs() do? Read the documentation.**
+
+Modify axis titles, plot titles and subtitles, captions, and legend.
+
+#### **3. What’s the difference between coord_quickmap() and coord_map()?**
+
+`coord_map()` projects a portion of the earth, which is approximately spherical, onto a flat 2D plane using any projection defined by the mapproj package. `coord_quickmap()` also projects a portion of the earth onto a flat 2D plane but ignores the curvature of Earth.
+
+```{r}
+# nz <- map_data("nz")
+# 
+# ggplot(nz, aes(long, lat, group = group)) +
+#   geom_polygon(fill = "white", colour = "black") +
+#   coord_quickmap()
+# 
+# ggplot(nz, aes(long, lat, group = group)) +
+#   geom_polygon(fill = "white", colour = "black") +
+#   coord_map()
+```
+
+#### **4. What does the plot below tell you about the relationship between city and highway mpg? Why is coord_fixed() important? What does geom_abline() do?**
+
+`coord_fixed()` forces a specified ratio between the physical representation of data units on the axes. The default ratio is 1 i.e. the line will be at a 45-degree angle.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline()
+
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline() +
+  coord_fixed()
+```
+
+
+
+
+
+# Wickham & Grolemund (2017): Chapters 4 Workflow: Basics
+
+- Object names must start with a letter, and can only contain letters, numbers, `_` and `.`. recommend snake_case where you separate lowercase words with `_`.
+
+- Press TAB once more when you’ve selected the function you want. RStudio will add matching opening (`(`) and closing (`)`) parentheses for you. 
+
+## 4.4 Exercises
+
+#### **1. Why does this code not work?**
+
+The character i is different in these two variables. We haven't assigned any value to the variable we want to print.
+
+```{r}
+# my_variable <- 10
+# my_varıable
+#> Error in eval(expr, envir, enclos): object 'my_varıable' not found
+```
+
+#### **2. Tweak each of the following R commands so that they run correctly:**
+
+dota -> data, fliter -> filter, diamond -> diamonds
+
+```{r}
+# Original
+# library(tidyverse)
+# 
+# ggplot(dota = mpg) + 
+#   geom_point(mapping = aes(x = displ, y = hwy))
+# 
+# fliter(mpg, cyl = 8)
+# filter(diamond, carat > 3)
+
+# After tweak
+library(tidyverse)
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy))
+
+filter(mpg, cyl == 8)
+filter(diamonds, carat > 3)
+```
+#### **3. Press Alt + Shift + K. What happens? How can you get to the same place using the menus?**
+
+A menu with keyboard shortcuts will show up.
+
+
+
+
+# Wickham & Grolemund (2017): Chapters 5 Data Transformation
+
+## **5.2.4 Exercises - Filter**
+```{r}
+library(nycflights13)
+library(tidyverse)
+```
+
+### 1.1. Find all flights that had an arrival delay of two or more hours
+```{r}
+filter(flights, arr_delay >= 120)
+```
+There are 10,200 flights that have had an arrival delay of two or more hours.
+
+### 1.2. Find all flights that flew to Houston (IAH or HOU)
+```{r}
+filter(flights, dest %in% c("IAH","HOU"))
+```
+There were 9,313 flights who had a destination of Houston (IAH or HOU).  
+
+### 1.3. Find all flights that were operated by United, American, or Delta
+```{r}
+#First it is necessary to find out the codes for each carrier. 
+airlines
+filter(flights, carrier %in% c("UA","AA","DL"))
+```
+There are 139,504 flights that were operated by United, American, or Delta. 
+
+### 1.4. Find all flights that departed in summer (July, August, and September)
+```{r}
+#Month in the dataset is an integer with January as 1. Therefore, July would be equal to 7, August equal to 8, and September equal to 9.  
+filter(flights, month>=7, month<=9)
+```
+There are 86,326 flights that departed in the summer months of July, August, and September. 
+
+### 1.5. Find all flights that arrived more than two hours late, but did not leave late
+```{r}
+filter(flights, arr_delay > 120, dep_delay <= 0)
+```
+There were 29 flights that had an arrival delay of more than 2 hours but did not leave late. 
+
+### 1.6. Find all flights that were delayed by at least an hour, but made up over 30 minutes in flight
+```{r}
+filter(flights, dep_delay >= 60, dep_delay - arr_delay > 30)
+```
+There were 1,844 flights who had a departure delay of at least one hour, but made up over 30 minutes in flight.
+
+### 1.7. Find all flights that departed between midnight and 6am (inclusive)
+```{r}
+#Confirm that departure time is indeed listed as military time. The maximum listed is 2400 which is actually midnight. 
+summary(flights$dep_time)
+filter(flights, dep_time <= 600 | dep_time == 2400)
+```
+
+There are 9,373 flights that departed between midnight and 6am (inclusive). 
+
+### 2. Can you use dplyr filtering helper to simplify the code needed to answer the previous challenges?
+```{r}
+#The dplyr filtering helper between() is a boundary that can be used when numeric vectors fall in a specified range. For example between(x, left, right) where X is the variable of focus and left and right are the ranges. Therefore, between() can be used when calculating the number of flights that departed in the summer months of July (7), August (8), and September (9).
+filter(flights, between(month, 7, 9))
+```
+### 3. How many flights have a missing dep_time? What other variables are missing? What might these rows represent?
+```{r}
+filter(flights, is.na(dep_time))
+```
+There are 8,255 flights that have a missing departure time. Additionally, these same flights also have missing arrival times. It can be assumed that these flights were cancelled.  
+
+### 4. Why is NA ^ 0 not missing? Why is NA | TRUE not missing? Why is FALSE & NA not missing? Can you figure out the general rule?
+```{r}
+NA ^ 0
+NA | TRUE
+NA & FALSE
+NA * 0
+```
+NA represents an unknown value. Anything that is `^ 0` equals `1` and NA | TRUE is saying whether one of the two is `TRUE` and the second one is. FALSE & NA is FALSE because NA could hold both True and False. However, in NA * 0, it is unclear why this would be NA instead of 0 following prior logic. 
+
+## **5.3.1 Exercises - Arrange**
+### 1. How could you use arrange() to sort all missing values to the start?
+```{r}
+#Reorder departure time so that it is in descending order. Because missing values are always sorted at the end, using is.na will sort missing values at the start.
+arrange(flights, dep_time)
+arrange(flights, desc(dep_time))
+arrange(flights, desc(is.na(dep_time)), dep_time)
+```
+
+### 2. Sort flights to find the most delayed flights. Find the flights that left the earliest.
+```{r}
+#Sorting the flights in descending order will allow you to see which flights were the most delayed.
+arrange(flights, desc(dep_delay))
+
+#Sorting the flights by dep_delay, without specifying descending order, will display the earliest flights. 
+arrange(flights, dep_delay)
+```
+The most delayed flight, after sorting in descending order for departure delay, was HA 51, which was delayed by 1,301 minutes! It departed from JFK flew to HNL.The earliest flight was B^ 97 and departed 43 minutes earlier than expected. This flight was from JFK and flew to DEN. 
+
+### 3. Sort flights to find the fastest (highest speed) flights.
+```{r}
+#I am choosing to define "fastest" by looking at total distance divided by the air time. 
+arrange(flights, desc(distance / air_time))
+```
+The fastest flight can be seen as DL 1499 which covered a distance of 762 miles in 65 minutes of airtime.
+
+### 4. Which flights traveled the farthest? Which traveled the shortest?
+```{r}
+arrange(flights, desc(distance))
+arrange(flights, distance)
+```
+The farthest flight was HA 51 which traveled for 4983 miles. The shortest flight was US 1632 which traveled for only 17 miles.
+
+## **5.4.1 Exercises - Select**
+### 1. Brainstorm as many ways as possilbe to select dep_time, dep_delay, arr_time, and arr_delay from flights
+```{r}
+#Select all columns
+select(flights, dep_time, dep_delay, arr_time, arr_delay)
+
+#Select variables that matches names that start in arr_ or dep_
+select(flights, starts_with("arr_") | starts_with("dep_"))
+
+#Combine values into a list and then use select
+vars <- c("dep_time", "dep_delay", "arr_time", "arr_delay")
+select(flights, vars)
+
+#Update code to use all_of(vars) due to the error message regarding ambiguity. all_of is used for strict selection.  
+vars <- c("dep_time", "dep_delay", "arr_time", "arr_delay")
+select(flights, all_of(vars))
+
+```
+
+### 2. What happens when you include the name of a variable multiple times in a select() call?
+```{r}
+select(flights, dep_time, dep_delay, arr_time, arr_delay, arr_delay)
+```
+When using select(), duplicate variables do not lead to an error message. The code only represents the variable once even if listed multiple times in select(). 
+
+### 3. What does the any_of() function do? Why might it be helpful in conjunction with this vector?
+According to tidyselect, all_of and any_of are similar in function. However, all_of will produce an error message if there is a missing variable from the dataset. In contrast, any_of allows missing variables. 
+```{r}
+#Try using any_of with a missing variable added and any_of()
+vars <- c("year", "month", "day", "dep_delay", "arr_delay", "data")
+select(flights, any_of(vars))
+```
+
+When running the code using any_of() and adding a missing variable, I am still able to produce the non-missing variable columns. However, when I ran the same code again using all_of(), I received an error message. 
+
+### 4. Does the result of running the following code surprise you? How do the select helpers deal with case by default? How can you change that default?
+```{r}
+#Running the original code
+select(flights, contains("TIME"))
+
+#Adjust default so that the command is case sensitive. 
+select(flights, contains("TIME", ignore.case = FALSE)) 
+```
+
+The original code did not account for the capital letters in of TIME. Instead, it produces all columns that have "time" in the variable name. Therefore, it is necessary to add ignore.case to the code and change the default so that it recognizes the case of the variable listed. 
+
+## **5.5.2 Exercises - Mutate**
+### 1. Currently dep_time and sched_dep_time are convenient to look at, but hard to compute with because they’re not really continuous numbers. Convert them to a more convenient representation of number of minutes since midnight.
+```{r}
+#Look at how dep_time and sched_dep_time are currently represented
+select(flights, dep_time, sched_dep_time)
+
+#Make to find the minutes, make sure to divide by 100 (to get hours), multiply by 60, to get minutes, and then add on the remainder of minutes. Account for the fact that midnight is 2400 (or 1440 minutes). This needs to be converted to 0 as we are looking at minutes SINCE midnight.  
+flights_dep_time <- mutate(flights,
+    dep_time_min = (dep_time %/% 100 * 60 + dep_time %% 100) %% 1440, 
+    sched_dep_time_min = (sched_dep_time %/% 100 * 60 + sched_dep_time %% 100) %% 1440)
+
+#View the newly mutated variables to make sure they are accurate
+select(flights_dep_time, dep_time, sched_dep_time, dep_time_min, sched_dep_time_min)
+```
+### 2. Compare air_time with arr_time - dep_time. What do you expect to see? What do you see? What do you need to do to fix it?
+I expect to see that air_time is equal to arr_time - dep_time. 
+```{r}
+#First look at the values for each variable
+select(flights, air_time, arr_time, dep_time)
+
+#Because air_time is in minutes, arr_time and dep_time also need to be converted into minutes. Use the same code from the previous exercise. 
+flights_air_time <-
+  mutate(flights, 
+      dep_time_min = (dep_time %/% 100 * 60 + dep_time %% 100) %% 1440, 
+      arr_time_min = (arr_time %/% 100 * 60 + arr_time %% 100) %% 1440, 
+      air_time_diff = arr_time_min - dep_time_min,
+      air_time_diff_2 = air_time - arr_time_min + dep_time_min)
+
+#Check whether or not air_time does in fact equal arr_time_min - dep_time_min. Notice that air_time and air_time_diff, in most cases, are not equal.  
+select(flights_air_time, air_time_diff, air_time, arr_time_min, dep_time_min)
+
+#Check whether air_time_diff_2 is equal to zero (if air_time does in fact equal arr_time_min - dep_time_min, then this should be the case through the mutated variable)
+nrow(filter(flights_air_time, air_time_diff_2 != 0))
+```
+In both mutated variables for air_time_diff and air_time_diff_2, we see that arr_time and dep_time, after converting to minutes, do not necessarily equal air_time. 
+
+
+### 3. Compare dep_time, sched_dep_time, and dep_delay. How would you expect those three numbers to be related?
+I expect that dep_delay is equal to dep_time - sched_dep_time.
+```{r}
+#First look at the values for each variable
+select(flights, dep_delay, dep_time, sched_dep_time)
+
+#Because dep_delay is in minutes, dep_time and sched_dep_time also need to be converted into minutes. Use the same code from the previous exercise. 
+flights_dep_time <-
+  mutate(flights, 
+      dep_time_min = (dep_time %/% 100 * 60 + dep_time %% 100) %% 1440, 
+      sched_dep_time_min = (sched_dep_time %/% 100 * 60 + sched_dep_time %% 100) %% 1440, 
+      dep_delay_diff = dep_delay - dep_time_min + sched_dep_time_min)
+
+#Check whether dep_delay_diff is equal to zero (if dep_delay does in fact equal dep_time_min - sched_dep_time_min, then this should be the case through the mutated variable)
+nrow(filter(flights_dep_time, dep_delay_diff != 0))
+filter(flights_dep_time, dep_delay_diff != 0)
+```
+Similar to the previous exercise, the difference in departure times, in 1,236 cases, does not equal zero.
+
+### 4. Find the 10 most delayed flights using a ranking function. How do you want to handle ties? Carefully read the documentation for min_rank().
+```{r}
+#Create a ranking of dep_delay in descending order
+flights_delay_rank <- 
+  mutate(flights, 
+      dep_delay_min_rank = min_rank(desc(dep_delay)),
+      dep_delay_row_number = row_number(desc(dep_delay)),
+      dep_delay_dense_rank = dense_rank(desc(dep_delay)))
+
+#Filter by flights delayed in descending order and from 1-10.
+flights_delay_rank <- filter(flights_delay_rank, !(dep_delay_min_rank >10 | dep_delay_row_number >10 | dep_delay_dense_rank >10))
+
+flights_delay_rank <- arrange(flights_delay_rank, dep_delay_min_rank)
+
+#View whether or not there are ties that need to be dealt with in the min_rank() function
+select(flights_delay_rank, dep_delay, dep_delay_min_rank, dep_delay_row_number, dep_delay_dense_rank)
+```
+There actually are no ties here for min_rank(). However, to make sure that min_rank() assigns ties the tied element to the lowest rank, you can use rank(x, ties.method = "min"). 
+
+### 5. What does 1:3 + 1:10 return? Why?
+```{r}
+1:3 + 1:10
+```
+Within 1-10, this code seems to be adding 1, 2, or 3, to each number (1+1, 2+2, 3+3, 1+4, 2+5, 3+6, 1+7, 2+8, 3+9, 1+10). The 1-3 is repeated to match the longer 1-10. However, as seen in the error message, the longer object length is not a multiple of the shorter object length (in this case 1:3). 
+
+### 6. What trigonometric functions does R provide?
+Through online resources, and the RStudio help page, the trigonometric functions available in R are for computing sine, cosine, tangent, arc-cosine, arc-sine, arc-tangent, and two-argument arc-tangent (see ?Trig). 
+```{r}
+#After googling, I first want to open the help page in R for trigonometric functions. 
+?Trig
+
+#sin(), cos(), and tan() are all functions in R. I run examples listed in the help page below.
+x <- seq(-3, 7, by = 1/8)
+tx <- cbind(x, cos(pi*x), cospi(x), sin(pi*x), sinpi(x),
+               tan(pi*x), tanpi(x), deparse.level=2)
+op <- options(digits = 4, width = 90) 
+head(tx)
+tx[ (x %% 1) %in% c(0, 0.5) ,]
+options(op)
+```
+
+## **5.6.7 Exercises - Summarise**
+### 1.Brainstorm at least 5 different ways to assess the typical delay characteristics of a group of flights.
+```{r}
+#Consider the following scenarios:
+  #A flight is 15 minutes early 50% of the time, and 15 minutes late 50% of the time.
+  #A flight is always 10 minutes late.
+  #A flight is 30 minutes early 50% of the time, and 30 minutes late 50% of the time.
+  #99% of the time a flight is on time. 1% of the time it’s 2 hours late.
+  #Which is more important: arrival delay or departure delay?
+
+#Assuming that arrival delay is more important than departure delay due to issues regarding connecting flights. 
+delay_char <-
+  flights %>%
+  group_by(flight) %>%
+  summarise(n = n(),
+            fifteen_early = mean(arr_delay == -15, na.rm = TRUE), #make sure na.rm is set to TRUE
+            fifteen_late = mean(arr_delay == 15, na.rm = TRUE),
+            ten_always = mean(arr_delay == 10, na.rm = TRUE),
+            thirty_early = mean(arr_delay == -30, na.rm = TRUE),
+            thirty_late = mean(arr_delay == 30, na.rm = TRUE),
+            percentage_on_time = mean(arr_delay == 0, na.rm = TRUE),
+            twohours = mean(arr_delay > 120, na.rm = TRUE)) %>%
+  map_if(is_double, round, 2) %>%
+  as_tibble()
+
+delay_char
+```
+
+Now I am going to explore the prompt of if a flight 15 minutes early 50% of the time, and 15 minutes late 50% of the time now that we have filter variables.
+```{r}
+delay_char %>% 
+  filter(fifteen_early == 0.5 & fifteen_late == 0.5) #There are 0 flights that meet this criteria. 
+```
+
+Now I am going to explore the prompt of if a flight is always 10 minutes late.
+```{r}
+delay_char %>% 
+  filter(ten_always == 1) #There are 5 flights that meet this criteria. 
+```
+
+Now I am going to explore the prompt of if a flight is 30 minutes early 50% of the time, and 30 minutes late 50% of the time.
+```{r}
+delay_char %>% 
+  filter(thirty_early == 0.5 & thirty_late == 0.5) #There are 0 flights that meet this criteria. 
+```
+
+Now I am going to explore the prompt if 99% of the time a flight is on time. 1% of the time it’s 2 hours late.
+```{r}
+delay_char %>% 
+  filter(percentage_on_time == 0.99 & twohours == 0.01) #There are 0 flights that meet this criteria. 
+```
+
+### 2.1 Come up with another approach that will give you the same output as not_cancelled %>% count(dest) (without using count()).
+```{r}
+not_cancelled <- flights %>%
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+
+#Try out the original expression first before adjusting
+not_cancelled %>%
+  count(dest)
+
+#The N in the previous code refers to the amount of times not cancelled flights have occured for each destination. Therefore, you can use group() to group by destination and summarise()
+not_cancelled %>%
+  group_by(dest) %>%
+  summarise(n = n()) #This produces the same n values as the previous expression.
+```
+
+### 2.2 Come up with another approach that will give you the same output as not_cancelled %>% count(tailnum, wt = distance) (without using count()).
+```{r}
+#Try out the original expression first before adjusting
+not_cancelled %>% 
+  count(tailnum, wt = distance)
+
+#Instead of using count(), use group() for tailnum and summarize for the distance
+not_cancelled %>%
+  group_by(tailnum) %>%
+  summarize(n = sum(distance)) #This produces the same n as the prior expression. 
+
+```
+
+### 3. Our definition of cancelled flights (is.na(dep_delay) | is.na(arr_delay) ) is slightly suboptimal. Why? Which is the most important column?
+The "or" portion of the function is problematic because a flight could depart but never arrive to its intended destination. However, logically, it would make more sense to say that if a flight did not depart then it could not arrive (and therefore would be cancelled). We need to check the data first for how missings occur with each variable.
+```{r}
+#First exploring if we can have flights with dep_delay information an missing information for arr_delay
+filter(flights, !is.na(dep_delay), is.na(arr_delay)) %>%
+  select(dep_time, arr_time, sched_arr_time, dep_delay, arr_delay) #There are 1,175 flights that have departure delay information but no arrival delay!
+
+#Need to change the expression to be & instead of or for dep_delay and arr_delay
+flights %>%
+    group_by(cancelled = is.na(dep_delay) & is.na(arr_delay)) %>%
+    summarise(n=n()) #There are 8255 flights that are truly cancelled (i.e. no dep_delay or arr_delay information)
+```
+
+
+### 4. Look at the number of cancelled flights per day. Is there a pattern? Is the proportion of cancelled flights related to the average delay?
+
+```{r}
+#Look at the relationship between flights per day and cancelled flights. 
+cancelled_per_day <- flights %>%
+  mutate(cancelled = (is.na(arr_delay) & is.na(dep_delay))) %>%
+  group_by(day) %>% #Group by day
+  summarise(
+    cancelled_num = sum(cancelled),
+    flights_num = n())
+
+#Plot relationship between flights per day and cancelled flights
+ggplot(cancelled_per_day) +
+  geom_point(aes(x = flights_num, y = cancelled_num)) +
+  labs(x = "Flights per day", y = "Cancelled flights per day")
+
+```
+From this graph, we can see that as the number of flights increases, so does the number of cancelled flights. In the following code, I now look at the relationship between cancelled flights and average delays (both arrival and departure). 
+
+```{r}
+#Look at the relationship between cancelled flights to average delay
+cancelled_and_delays <- flights %>%
+  mutate(cancelled = (is.na(arr_delay) & is.na(dep_delay))) %>%
+  group_by(day) %>%
+  summarise(
+    cancelled_prop = mean(cancelled),
+    avg_dep_delay = mean(dep_delay, na.rm = TRUE),
+    avg_arr_delay = mean(arr_delay, na.rm = TRUE)
+  ) %>%
+  ungroup() #No longer grouped by year, month, day
+
+#Plot the relationship between average departure delays and average cancelled flights.
+ggplot(cancelled_and_delays) +
+  geom_point(aes(x = avg_dep_delay, y = cancelled_prop)) +
+  labs(x = "Average departure delay", y = "Proportion of cancelled flights")
+```
+ 
+
+```{r}
+#Plot the relationship between average arrival delays and average cancelled flights.
+ggplot(cancelled_and_delays) +
+  geom_point(aes(x = avg_arr_delay, y = cancelled_prop))
+```
+It looks like there is a strong relationship between cancellations and delays. As delays increase (both arrival and departure) the proportion of cancellations also increase.
+
+### 5.1 Which carrier has the worst delays? 
+```{r}
+#First look at the average arrival delays by carrier and listed in descending order. 
+flights %>%
+  group_by(carrier) %>%
+  summarise(arr_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  arrange(desc(arr_delay))
+```
+It looks like carrier F9 has the worst delays. It is unclear what airline this corresponds to. 
+
+```{r}
+#Find out which airline corresponds to F9.
+filter(airlines, carrier == "F9")
+```
+Frontier Airlines Inc. (F9) has the worst delays. 
+
+### 5.2 Challenge: can you disentangle the effects of bad airports vs. bad carriers? Why/why not? (Hint: think about flights %>% group_by(carrier, dest) %>% summarise(n()))
+I want to compare the average delay of flights by carrier compared to average delay of flights by airport. However, this means that the carrier comparison to airport needs to attend to the same flight origin and destination - which is accounted for using the group() function. 
+```{r}
+flights %>%
+  summarise(n_carrier = n_distinct(carrier), #16 carriers
+            n_airport = n_distinct(dest), #105 
+            n_origin = n_distinct(origin)) #3 origins
+
+#Not quite sure how to disentangle the carrier vs. airport effects precisely, however, I will plot delays by carrier for each origin. 
+flights %>%
+  group_by(carrier) %>%
+  mutate(avg_carrier = mean(dep_delay, na.rm = T)) %>%
+  group_by(carrier, origin) %>%
+  mutate(origin_mean = mean(dep_delay, na.rm = T),
+         deviations = origin_mean - avg_carrier) %>%
+  summarise(deviations = mean(deviations), mean = mean(avg_carrier)) %>%
+  ggplot(aes(origin, deviations)) + geom_col() + facet_wrap(~ carrier)
+
+```
+It is unclear the specific effect between carrier and airport in terms of delays. However, from this plot of deviations we can see that Newark as much larger deviations compared to other airports. Additionally, it looks as though 9E, MQ, and OO seem to similary be airlines with large deviations in delays. 
+
+### 6. What does the sort argument to count() do. When might you use it?
+```{r}
+#Count() is helpful when you want to sort cases based on the count. An example of this is the count of flights at specific origin airports. You can see the counts for the number of flights at either Newark, JFK, or LGA. 
+
+flights %>%
+  count(origin, sort = T)
+```
+
+## **5.7. Exercises - Grouped Mutates**
+### 1. Refer back to the lists of useful mutate and filtering functions. Describe how each operation changes when you combine it with grouping.
+```{r}
+
+```
+
+### 2. Which plane (tailnum) has the worst on-time record?
+```{r}
+#To calculate the worst on-time record, I will look at average arrival delay. 
+flights %>%
+  filter(!is.na(arr_delay)) %>%
+  group_by(tailnum) %>% #Group by tailnum
+  summarise(arr_delay_mean = mean(arr_delay), n = n()) %>%
+  filter(min_rank(desc(arr_delay_mean)) == 1)
+```
+It looks as though the plane N844MH has the worst on-time record with a mean average delay of 320 minutes. However, the n only equals 1, which means this is based on one flight. I am going to run this again and filter for tailnum that have over 30 flights. 
+
+```{r}
+#To calculate the worst on-time record, I will look at average arrival delay. 
+flights %>%
+  filter(!is.na(arr_delay)) %>%
+  group_by(tailnum) %>%
+  summarise(arr_delay_mean = mean(arr_delay), n = n()) %>%
+  filter(n>=30) %>%
+  filter(min_rank(desc(arr_delay_mean)) == 1)
+```
+Filtering by 30 or more flights produces the worst tailnum as N203FR with a mean arrival delay of 59. This means that we need to consider the number of flights filtered when looking at "worst" on-time record.
+
+### 3. What time of day should you fly if you want to avoid delays as much as possible?
+```{r}
+#Group by hour to look at ideal times to fly.
+flights %>%
+  group_by(hour) %>%
+  summarise(arr_delay = mean(arr_delay, na.rm = TRUE)) %>%
+  arrange(arr_delay)
+```
+In the hours of 5am-9am the flights are, on average, ahead of schedule in arrival. However, when looking at flights later in the day, it seems that there are much longer average delays.
+
+```{r}
+#Another way to look at arrival delay by hour is to plot it.
+flights %>%
+  group_by(hour) %>%
+  filter(!is.na(arr_delay)) %>%
+  summarise(delay = mean(arr_delay > 0 , na.rm = T)) %>%
+  ggplot(aes(hour, delay, fill = delay)) + geom_col() 
+```
+
+### 4. For each destination, compute the total minutes of delay. For each flight, compute the proportion of the total delay for its destination.
+```{r}
+#First look at total minutes of arrival delay for each destination
+flights %>%
+  group_by(dest) %>%
+  #Need to make sure we are only focused on delays and that arrival delay is not missing!
+  filter(!is.na(arr_delay) & arr_delay > 0) %>% 
+  mutate(
+    arr_delay_total = sum(arr_delay),
+    arr_delay_comp = arr_delay / arr_delay_total) %>% #Look at both total arrival delay and also the comparison between arrival delay and total arrival delay
+  select(dest, carrier, flight, arr_delay, arr_delay_comp) %>% #Select only key variables of interest.
+  arrange(dest, desc(arr_delay_comp)) #Arrange so the proportion of delays is in descending order. Did not also do this for departure delays because the prompt specified looking at the destination. 
+```
+
+### 5. Using lag(), explore how the delay of a flight is related to the delay of the immediately preceding flight.
+```{r}
+#If we are looking at delays of flights preceding one another, presumably this means we need to group by origin (i.e. flights leaving from the same place that cause each other to be delayed).
+
+lagged_delays <- flights %>%
+  arrange(origin, month, day, dep_time) %>%
+  group_by(origin) %>% #Group by origin
+  mutate(dep_delay_lag = lag(dep_delay)) %>%
+  filter(!is.na(dep_delay), !is.na(dep_delay_lag)) #Account for missings
+
+#Plot the relationship between the average departure delay of flights based on previous flights at the same origin
+  lagged_delays %>%
+  group_by(dep_delay_lag) %>%
+  summarise(dep_delay_mean = mean(dep_delay)) %>%
+  ggplot(aes(y = dep_delay_mean, x = dep_delay_lag)) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 1500, by = 120)) + #Set to 2 hour increments
+  labs(y = "Departure Delay", x = "Previous Departure Delay")
+
+```
+There seems to be a linear relationship between previous departure delay and average departure delay between 0-240 minutes (or up to 4 hours). Afterwards, a fanning can be seen of the plotted flights depicting a less linear association. 
+
+### 6. Look at each destination. Can you find flights that are suspiciously fast? (i.e. flights that represent a potential data entry error). Compute the air time of a flight relative to the shortest flight to that destination. Which flights were most delayed in the air?
+```{r}
+#First find the flights that are suspiciously fast.
+flights %>%
+  group_by(dest) %>% #Grouping by destination
+  arrange(air_time) %>%
+  slice(1:5) %>%
+  select(tailnum, sched_dep_time, sched_arr_time, air_time) %>%
+  arrange(air_time)
+```
+
+```{r}
+#Next, compute the air time of a flight relative to the shortest flight to that destination.
+flights %>%
+  group_by(dest) %>%
+  mutate(shortest = air_time - min(air_time, na.rm = T)) %>%
+  top_n(1, air_time) %>%
+  arrange(-air_time) %>%
+  select(tailnum, sched_dep_time, sched_arr_time, shortest)
+```
+
+```{r}
+#Finally, find which flights were most delayed in the air?
+air_time_delayed <- flights %>%
+  group_by(origin, dest) %>% #Group by origin and destination
+  mutate(
+    air_time_min = min(air_time, na.rm = TRUE), #Remember to get rid of missings!
+    air_time_delay = air_time - air_time_min,
+    air_time_delay_pct = air_time_delay / air_time_min * 100) %>%
+  arrange(desc(air_time_delay)) %>% #arrange air time delay in descending order
+  select(
+    air_time_delay, carrier, flight,
+    origin, dest, year, month, day, dep_time,
+    air_time, air_time_min, air_time_delay_pct) %>%
+  head() %>% #Only display the first few rows
+  print(width = Inf) #Always print all columns regardless of screen width
+```
+It looks like JFK to SFO were the most delayed in the air. 
+
+### 7. Find all destinations that are flown by at least two carriers. Use that information to rank the carriers.
+```{r}
+flights %>%
+  group_by(dest) %>%
+  mutate(n_carriers = n_distinct(carrier)) %>%
+  filter(n_carriers >=2) %>%
+  group_by(carrier) %>%
+  summarise(n = n_distinct(dest)) %>%
+  arrange(desc(n))
+```
+EV is the carrier that has flown to the most destinations (51). 
+
+### 8. For each plane, count the number of flights before the first delay of greater than 1 hour.
+```{r}
+#Since it is not specified, I focused on arrival delays.
+flights %>%
+  filter(!is.na(arr_delay)) %>%
+  group_by(tailnum) %>% 
+  arrange(year, month, day, arr_time) %>%    #ensure order before cumany
+  filter(cumall(pmax(arr_delay) < 60)) %>% 
+  tally() 
+```
+
+
+
+# Wickham & Grolemund (2017): Chapters 6 Workflow: scripts
+
+## **6.3. Exercises **
+### 1. Go to RStudio Twitter account and find one tip that looks interesting and practice it!
+```{r}
+#A helpful tip is understanding what is inside the data frame. To do so, hold down the Ctrl (Cmd on macOS) and click on the name of an object in the editor to view its contents. Use the example below to click on "not_cancelled" to look in the data frame. 
+not_cancelled <-flights %>%
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+```
+Due to the length of this current R Markdown, I also appreciated learning how to collapse R Markdown headers by using Edit > Fold > Collapse All.
+
+### 2. What other common mistakes will RStudio diagnostics report?
+The RStudio diagnostics will report missing, unmatched, partially matched, or too many arguments in R function calls. It will also warn users if variables have no defined scope or has a defined scope and is not used. It can also check whether or not the code aligns with Hadley Wickham's style guide (such as inappropriate use of white space). Finally, you can run full project level diagnostics. 
+
+
+
+# Bulut & Dejardins (2019) Exploring, Visualizing, and Modeling Big Data in R
+### 4.2.1 Exercises
+#### **1. Read in the pisa data set. **
+```{r}
+# install.packages("data.table")
+library(data.table)
+pisa <- fread("/Users/ming/Desktop/orla/pisa2015.csv", na.strings = "")
+```
+
+### 4.3.1 Exercises
+#### **1. Subset all the Female students (ST004D01T) in Germany**
+```{r}
+germany_f = pisa[ST004D01T == "Female" & CNTRYID == "Germany"]
+```
+
+#### **2. How many female students are there in Germany?**
+```{r}
+nrow(germany_f)  # There are 3197 female students in Germany
+```
+
+#### **3. The .N function returns the length of a vector/number of rows. Use chaining with the .N function to answer Exercise 2.**
+```{r}
+pisa[ST004D01T == "Female" & CNTRYID == "Germany"][,.N]
+```
+
+### 4.4.1 Exercises
+```{r}
+bin.to.num <- function(x){
+  if (is.na(x)) NA
+  else if (x == "Yes") 1L
+  else if (x == "No") 0L
+}
+
+pisa[, `:=` 
+     (female = ifelse(ST004D01T == "Female", 1, 0),
+       sex = ST004D01T,
+       
+       # At my house we have ...
+       desk = sapply(ST011Q01TA, bin.to.num),
+       own.room = sapply(ST011Q02TA, bin.to.num),
+       quiet.study = sapply(ST011Q03TA, bin.to.num),
+       computer = sapply(ST011Q04TA, bin.to.num),
+       software = sapply(ST011Q05TA, bin.to.num),
+       internet = sapply(ST011Q06TA, bin.to.num),
+       lit = sapply(ST011Q07TA, bin.to.num),
+       poetry = sapply(ST011Q08TA, bin.to.num),
+       art = sapply(ST011Q09TA, bin.to.num),
+       book.sch = sapply(ST011Q10TA, bin.to.num),
+       tech.book = sapply(ST011Q11TA, bin.to.num),
+       dict = sapply(ST011Q12TA, bin.to.num),
+       art.book = sapply(ST011Q16NA, bin.to.num))]
+
+```
+
+#### ** 1. The computer and software variables that were created above ask a student whether they had a computer in their home that they can use for school work (computer) and whether they had educational software in their home (software). Find the proportion of students in the Germany and Uruguay that have a computer in their home or have educational software. **
+```{r}
+pisa[CNTRYID %in% c("Germany", "Uruguay"),
+     .(cmpt_prop = mean(computer,na.rm = T), sfwr_prop = mean(software,na.rm = T))]
+```
+
+#### **2. For just female students, find the proportion of students who have their own room (own.room) or a quiet place to study (quiet.study).**
+```{r}
+pisa[sex == "Female",.(ownroom_prop = mean(own.room,na.rm = T), qstudy_prop = mean(quiet.study,na.rm = T))]
+```
+
+### 4.5.1 Exercises
+#### **1. Calculate the proportion of students who have art in their home (art) and the average age (AGE) of the students by gender.**
+```{r}
+pisa[,.(art_prop = mean(art, na.rm = T),
+        avg_age = mean(AGE, na.rm = T)), by = .(sex = ST004D01T)]
+```
+
+#### **2. Within a by argument you can discretize a variable to create a grouping variable. Perform a median split for age within the by argument and assess whether there are age difference associated with having your own room (own.room) or a desk (desk).**
+```{r}
+pisa[,.(own.room_prop = mean(own.room, na.rm = T),
+     desk_prop = mean(desk, na.rm = T)),
+     by = .(AGE > mean(AGE, na.rm = T))]
+```
+There are almost no difference association with having your own room or a desk. 
